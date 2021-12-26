@@ -6,7 +6,7 @@ Created on Sat Dec 18 17:18:14 2021
 """
 import numpy as np
 
-from scipy.stats import t as students_t
+import base_pred_conf_interval as bpc
 
 
 def bootstrap_mean_var_y(model, x, y, sample_weights=None, x_test=None, 
@@ -41,27 +41,11 @@ def bootstrap_mean_var_y(model, x, y, sample_weights=None, x_test=None,
     return y_test_fit, var_f_test
 
 
-def t_crit(dof, significance_level=0.05):
-    if significance_level is None:
-        significance_level = 0.05 # default for 95%
-    p = 1 - (significance_level / 2)
-    t = students_t.ppf(p, dof)
-    return t
-
-
-def base_pred_conf_interval(var_y, dof, significance_level=None):
-    interval = (
-        t_crit(dof, significance_level=significance_level)
-        * np.sqrt(var_y)
-    )
-    return interval
-
-
 ### TODO make class? so dont have to redo bootstrap_mean_var_y
 # when switching between pred and conf intervals
 def bootstrap_pred_conf_interval(model, x, y, sample_weights=None, x_test=None,
-                                 nbootstraps=None, resample_frac=0.7,
-                                 interval_type='pred', significance_level=None):
+                                 interval_type='pred', significance_level=None,
+                                 nbootstraps=None, resample_frac=0.7):
     y_test_fit, var_f_test = bootstrap_mean_var_y(
         model, 
         x, 
@@ -79,7 +63,7 @@ def bootstrap_pred_conf_interval(model, x, y, sample_weights=None, x_test=None,
         sigma_sqrd = np.sum((y - model.predict(x)) ** 2) / dof
         var_y += sigma_sqrd
     
-    pred_conf_interval = base_pred_conf_interval(
+    pred_conf_interval = bpc.base_pred_conf_interval(
         var_y,
         dof,
         significance_level=significance_level

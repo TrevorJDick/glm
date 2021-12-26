@@ -10,43 +10,55 @@ import numpy as np
 class GLM:
     
     def __init__(self, basis_funcs=([lambda x: 1, lambda x:x],)):
+        """
+        Parameters
+        ----------
+        basis_funcs : list or tuple
+            List of lists of functions, where each list in the list is
+            the basis functions corresponding to a single dimension.  
+            
+            For example, if passed
+            ([lambda x: np.ones_like(x), lambda x: x], [lambda x: x])
+            this is equivalent to the basis {1, x, y} for the equation
+            z = Ax + By + C; an equation for a plane.
+            
+            The default is the basis for an equation of a line
+            in 1-dimension ([lambda x: 1, lambda x:x],).
+        """
         self.basis_funcs = basis_funcs
     
     
     def fit(self, X, y, sample_weights=None):
         A = GLM.create_design_matrix(self.basis_funcs, X)
         W = GLM.get_sample_weight_matrix(sample_weights, y)
-        ATW = np.dot(A.T, W)
         
-        V = np.dot(ATW, A)
-        if np.linalg.det(V) == 0:
-            raise ValueError(
-                'NO SOLUTION: det(A^T.W.A)=0\n'
-                'Check design matrix or sample weight matrix!'
+        B = GLM.compute_b_matrix(A, W)
+        
+        self.beta = np.dot(B, y)
+        
+        ### for diagnotics and stats 
+        # trace(W.M)
+        self.dof = np.trace(
+            np.dot(
+                W,
+                GLM.compute_m_matrix(
+                    GLM.compute_projection_matrix(A, B)
+                )
             )
-        B = np.dot(np.linalg.inv(V), ATW)
-        del V, ATW
-        
-        self.beta = np.dot(
-            B,
-            y
         )
-        
-        # for diagnotics and stats 
-        PA = np.dot(A, B)
-        del A
-        M = np.identity(PA.shape[0]) - PA
-        self.dof = np.trace(np.dot(W, M))
-        del PA, M
-        e = y - self.predict(X)
-        self.sigma_sqrd = np.dot(np.dot(e.T, W), e) / self.dof
-        del e, W
-        self.var_beta = self.sigma_sqrd * np.dot(B, B.T)
-        del B
+        self.sigma_sqrd = GLM.compute_sigma_sqrd(
+            y - GLM._func_glm(A, self.beta), 
+            W,
+            self.dof
+        )
+        self.var_beta = GLM.compute_var_beta(self.sigma_sqrd, B)
         return self
     
     
     def predict(self, X):
+        ### TODO address trade off here:
+        # must recompute design matrix each predict call
+        # not saving design matrix during fit reduces memory footprint
         return GLM.func_glm(self.basis_funcs, self.beta, X)
     
     
@@ -65,9 +77,14 @@ class GLM:
     
     
     @staticmethod
+    def _func_glm(A, beta):
+        return np.dot(A, beta)
+    
+    
+    @staticmethod
     def func_glm(basis_funcs, beta, X):
         A = GLM.create_design_matrix(basis_funcs, X)
-        return np.dot(A, beta)
+        return GLM._func_glm(A, beta)
     
     
     @staticmethod
@@ -78,7 +95,7 @@ class GLM:
     @staticmethod
     def jac_objective(basis_funcs, beta, X, y, sample_weights=None):
         A = GLM.create_design_matrix(basis_funcs, X)
-        e = y - np.dot(A, beta)
+        e = y - np.dot(A, beta) # faster not to call func_glm
         W = GLM.get_sample_weight_matrix(sample_weights, y)
         return 2 * np.dot(np.dot(e.T, W), A)
     
@@ -110,3 +127,51 @@ class GLM:
                 'Weight matrix should have shape nsamples x nsamples!'
             )
         return W
+    
+    
+    @staticmethod
+    def compute_b_matrix(A, W):
+        """
+        beta = B.y
+        """
+        ATW = np.dot(A.T, W)
+        
+        V = np.dot(ATW, A)
+        if np.linalg.det(V) == 0:
+            raise ValueError(
+                'NO SOLUTION: det(A^T.W.A)=0\n'
+                'Check design matrix or sample weight matrix!'
+            )
+        B = np.dot(np.linalg.inv(V), ATW)
+        del V, ATW
+        return B
+    
+    
+    @staticmethod
+    def compute_projection_matrix(A, B):
+        """
+        projection matrix is idempotent P^2 = P
+        
+        y_fit = P.y
+        """
+        return np.dot(A, B)
+    
+    
+    @staticmethod
+    def compute_m_matrix(PA):
+        """
+        residual operator matrix
+        
+        e = M.y
+        """
+        return np.identity(PA.shape[0]) - PA
+    
+    
+    @staticmethod
+    def compute_sigma_sqrd(e, W, dof):
+        return  np.dot(np.dot(e.T, W), e) / dof
+    
+    
+    @staticmethod
+    def compute_var_beta(sigma_sqrd, B):
+        return sigma_sqrd * np.dot(B, B.T)

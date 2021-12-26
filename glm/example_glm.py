@@ -9,7 +9,7 @@ import numpy as np
 
 import bootstrapped_pred_conf_interval as bpci
 import general_linear_model as glm
-import prediction_confidence_intervals as pci
+import prediction_confidence_interval as pci
 
 
 
@@ -81,10 +81,10 @@ var_f_bs, pred_conf_interval_bs = bpci.bootstrap_pred_conf_interval(
     y, 
     sample_weights=None,
     x_test=x_fit,
-    nbootstraps=50,
-    resample_frac=0.7,
     interval_type=interval_type, 
-    significance_level=None
+    significance_level=None,
+    nbootstraps=50,
+    resample_frac=0.7
 )
 
 plt.scatter(X[:, 0], y, s=15)
@@ -118,6 +118,8 @@ plt.show()
 ### 3D example ###
 beta_actual = np.array([0.5, 2.28901, np.pi, -1.5])
 basis_funcs = ([lambda x:x, np.sin, np.tanh], [lambda y: y**2])
+# beta_actual = np.array([-1, 0.5, 2])
+# basis_funcs = ([lambda x: np.ones_like(x), lambda x: x], [lambda y: y])
 
 n = 500
 X = np.concatenate(
