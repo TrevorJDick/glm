@@ -9,7 +9,7 @@ import numpy as np
 
 class GLM:
     
-    def __init__(self, basis_funcs=([lambda x: 1, lambda x:x],)):
+    def __init__(self, basis_funcs=([lambda x: np.ones_like(x), lambda x:x],)):
         """
         Parameters
         ----------
