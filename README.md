@@ -91,7 +91,7 @@ pred_conf_interval: array like of shape (n, )
     Prediction or confidence interval, on the domain of x_test, based on the interval_type.  
 
 ```
-import glm. prediction_confidence_interval as pci
+import glm.prediction_confidence_interval as pci
 
 var_f, pred_conf_interval = pci.glm_pred_conf_interval(
   model,
@@ -143,7 +143,7 @@ pred_conf_interval: array like of shape (n, )
     Prediction or confidence interval, on the domain of x_test, based on the interval_type.  
 
 ```
-import glm. bootstrapped_pred_conf_interval as bpci
+import glm.bootstrapped_pred_conf_interval as bpci
 
 var_f, pred_conf_interval = bpci.bootstrap_pred_conf_interval(
   model,
